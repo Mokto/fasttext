@@ -23,10 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x86_64 on Intel runner — avoids macOS 14 SDK min-version issue
-          - os: macos-13
-            archs: x86_64
-          # arm64 on Apple Silicon runner
           - os: macos-14
             archs: arm64
           - os: windows-latest
