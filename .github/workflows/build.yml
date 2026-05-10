@@ -27,11 +27,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone fasttext ${{ env.FASTTEXT_VERSION }}
+      - name: Download fasttext ${{ env.FASTTEXT_VERSION }} source from PyPI
         shell: bash
         run: |
-          git clone --depth 1 --branch v${{ env.FASTTEXT_VERSION }} \
-            https://github.com/facebookresearch/fastText.git fasttext-src
+          pip download --no-binary :all: --no-deps \
+            "fasttext==${{ env.FASTTEXT_VERSION }}" -d sdist/
+          mkdir fasttext-src
+          tar xf sdist/fasttext-*.tar.gz -C fasttext-src --strip-components=1
 
       - name: Set up QEMU (Linux aarch64 emulation)
         if: runner.os == 'Linux'
@@ -42,7 +44,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22
         with:
-          package-dir: fasttext-src/python
+          package-dir: fasttext-src
           output-dir: wheelhouse
         env:
           CIBW_BUILD: "cp314-*"
