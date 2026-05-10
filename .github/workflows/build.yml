@@ -17,13 +17,23 @@ env:
 
 jobs:
   build_wheels:
-    name: ${{ matrix.os }}
+    name: ${{ matrix.os }} ${{ matrix.archs }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest]
-        # ubuntu re-enable once macos/windows are green (linux already passes)
+        include:
+          # x86_64 on Intel runner — avoids macOS 14 SDK min-version issue
+          - os: macos-13
+            archs: x86_64
+          # arm64 on Apple Silicon runner
+          - os: macos-14
+            archs: arm64
+          - os: windows-latest
+            archs: AMD64
+          # ubuntu re-enable once mac/windows are green (linux already passes)
+          # - os: ubuntu-latest
+          #   archs: x86_64 aarch64
 
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +46,21 @@ jobs:
           mkdir fasttext-src
           tar xf sdist/fasttext-*.tar.gz -C fasttext-src --strip-components=1
 
-      - name: Set up QEMU (Linux aarch64 emulation)
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
+      - name: Patch setup.py for MSVC (replace GCC flags with MSVC equivalents)
+        if: runner.os == 'Windows'
+        shell: python
+        run: |
+          import re
+          with open('fasttext-src/setup.py') as f:
+              content = f.read()
+          # MSVC uses /std:c++17 instead of -std=c++17, and doesn't support -fvisibility=hidden
+          content = re.sub(
+              r'extra_compile_args\s*=\s*\[[^\]]+\]',
+              'extra_compile_args=["/std:c++17", "/d2FH4-"]',
+              content,
+          )
+          with open('fasttext-src/setup.py', 'w') as f:
+              f.write(content)
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
@@ -50,22 +70,16 @@ jobs:
         env:
           CIBW_BUILD: "cp314-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
-          CIBW_ARCHS_WINDOWS: "AMD64"
+          CIBW_ARCHS: ${{ matrix.archs }}
           # pybind11 ≥ 2.13 is required for Python 3.14 support.
           # fasttext 0.9.3 bundles pybind11 2.2.x which does not have Python 3.14
           # ABI markers and uses deprecated C API removed in Python 3.14.
           CIBW_BEFORE_BUILD: "pip install pybind11>=2.13"
-          # Cross-compiling x86_64 on the macOS 14 (arm64) runner defaults to
-          # targeting macOS 14.0. Set 10.15 so delocate's compatibility check passes
-          # and the wheel runs on all macOS versions Python 3.14 supports.
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}
+          name: cibw-wheels-${{ matrix.os }}-${{ matrix.archs }}
           path: wheelhouse/*.whl
 
   release:
