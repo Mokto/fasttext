@@ -27,9 +27,8 @@ jobs:
             archs: arm64
           - os: windows-latest
             archs: AMD64
-          # ubuntu re-enable once mac/windows are green (linux already passes)
-          # - os: ubuntu-latest
-          #   archs: x86_64 aarch64
+          - os: ubuntu-latest
+            archs: x86_64 aarch64
 
     steps:
       - uses: actions/checkout@v4
