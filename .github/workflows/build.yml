@@ -42,7 +42,7 @@ jobs:
           platforms: arm64
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2
+        uses: pypa/cibuildwheel@v3.4.1
         with:
           package-dir: fasttext-src
           output-dir: wheelhouse
