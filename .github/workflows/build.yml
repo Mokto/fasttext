@@ -55,7 +55,11 @@ jobs:
           # pybind11 ≥ 2.13 is required for Python 3.14 support.
           # fasttext 0.9.3 bundles pybind11 2.2.x which does not have Python 3.14
           # ABI markers and uses deprecated C API removed in Python 3.14.
-          CIBW_BEFORE_BUILD: "pip install 'pybind11>=2.13'"
+          CIBW_BEFORE_BUILD: "pip install pybind11>=2.13"
+          # Cross-compiling x86_64 on the macOS 14 (arm64) runner defaults to
+          # targeting macOS 14.0. Set 10.15 so delocate's compatibility check passes
+          # and the wheel runs on all macOS versions Python 3.14 supports.
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.15
           CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v4
