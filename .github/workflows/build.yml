@@ -42,22 +42,6 @@ jobs:
           mkdir fasttext-src
           tar xf sdist/fasttext-*.tar.gz -C fasttext-src --strip-components=1
 
-      - name: Patch setup.py for MSVC (replace GCC flags with MSVC equivalents)
-        if: runner.os == 'Windows'
-        shell: python
-        run: |
-          import re
-          with open('fasttext-src/setup.py') as f:
-              content = f.read()
-          # MSVC uses /std:c++17 instead of -std=c++17, and doesn't support -fvisibility=hidden
-          content = re.sub(
-              r'extra_compile_args\s*=\s*\[[^\]]+\]',
-              'extra_compile_args=["/std:c++17", "/d2FH4-"]',
-              content,
-          )
-          with open('fasttext-src/setup.py', 'w') as f:
-              f.write(content)
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
         with:
@@ -68,9 +52,12 @@ jobs:
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
           CIBW_ARCHS: ${{ matrix.archs }}
           # pybind11 ≥ 2.13 is required for Python 3.14 support.
-          # fasttext 0.9.3 bundles pybind11 2.2.x which does not have Python 3.14
-          # ABI markers and uses deprecated C API removed in Python 3.14.
           CIBW_BEFORE_BUILD: "pip install pybind11>=2.13"
+          # MSVC reads the CL env var as extra flags; /std:c++17 enables string_view etc.
+          # fasttext setup.py passes -std=c++17 which MSVC silently ignores.
+          CIBW_ENVIRONMENT_WINDOWS: "CL=/std:c++17"
+          # macOS 14 runner builds binaries targeting 14.8 — match it to satisfy delocate.
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=14.8"
           CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v4
