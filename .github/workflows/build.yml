@@ -1,0 +1,110 @@
+name: Build wheels
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      fasttext_version:
+        description: fasttext version to build
+        default: "0.9.3"
+        required: true
+
+env:
+  FASTTEXT_VERSION: ${{ inputs.fasttext_version || '0.9.3' }}
+
+jobs:
+  build_wheels:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone fasttext ${{ env.FASTTEXT_VERSION }}
+        shell: bash
+        run: |
+          git clone --depth 1 --branch v${{ env.FASTTEXT_VERSION }} \
+            https://github.com/facebookresearch/fastText.git fasttext-src
+
+      - name: Set up QEMU (Linux aarch64 emulation)
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        with:
+          package-dir: fasttext-src/python
+          output-dir: wheelhouse
+        env:
+          CIBW_BUILD: "cp314-*"
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_WINDOWS: "AMD64"
+          # pybind11 ≥ 2.13 is required for Python 3.14 support.
+          # fasttext 0.9.3 bundles pybind11 2.2.x which does not have Python 3.14
+          # ABI markers and uses deprecated C API removed in Python 3.14.
+          CIBW_BEFORE_BUILD: "pip install 'pybind11>=2.13'"
+          CIBW_BUILD_VERBOSITY: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  release:
+    name: GitHub release
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-wheels-*
+          merge-multiple: true
+          path: dist
+
+      - name: List wheels
+        run: ls -lh dist/
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+          generate_release_notes: true
+          body: |
+            Pre-built fasttext ${{ env.FASTTEXT_VERSION }} wheels for **Python 3.14**.
+
+            ## Install
+
+            Download the `.whl` for your platform and install directly:
+
+            ```bash
+            pip install fasttext-<version>-cp314-cp314-<platform>.whl
+            ```
+
+            Or point pip at this release:
+
+            ```bash
+            pip install fasttext --find-links \
+              https://github.com/Mokto/fasttext/releases/latest/download/
+            ```
+
+            ## Platforms
+
+            | OS | Architecture |
+            |---|---|
+            | Linux (manylinux) | x86_64, aarch64 |
+            | macOS | x86_64, arm64 |
+            | Windows | AMD64 |
