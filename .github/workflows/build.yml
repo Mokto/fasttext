@@ -47,7 +47,7 @@ jobs:
       - name: Rename package to fasttext-prebuilt
         shell: python
         run: |
-          import re, pathlib, shutil
+          import re, pathlib, shutil, os
           p = pathlib.Path('fasttext-src/setup.py')
           content = p.read_text()
           # Replace the name= argument so PyPI sees fasttext-prebuilt
@@ -57,6 +57,10 @@ jobs:
           # on fasttext-prebuilt (fasttext/tests/__init__.py eagerly imports
           # the C extension, which breaks pytest startup).
           content = re.sub(r'\s*str\("fasttext\.tests"\),?', '', content)
+          # Bump version to match the git tag (v0.9.4 → 0.9.4)
+          tag = os.environ.get('GITHUB_REF', '').replace('refs/tags/v', '')
+          if tag and not tag.startswith('refs/'):
+              content = re.sub(r'(__version__\s*=\s*)["\'][^"\']+["\']', f'\\g<1>"{tag}"', content)
           p.write_text(content)
           shutil.rmtree('fasttext-src/python/fasttext_module/fasttext/tests', ignore_errors=True)
 
