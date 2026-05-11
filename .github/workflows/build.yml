@@ -47,12 +47,18 @@ jobs:
       - name: Rename package to fasttext-prebuilt
         shell: python
         run: |
-          import re, pathlib
+          import re, pathlib, shutil
           p = pathlib.Path('fasttext-src/setup.py')
           content = p.read_text()
           # Replace the name= argument so PyPI sees fasttext-prebuilt
           content = re.sub(r'(name\s*=\s*)["\']fasttext["\']', r'\1"fasttext-prebuilt"', content)
+          # Remove fasttext.tests from installed packages — test files in
+          # site-packages confuse pytest when running in projects that depend
+          # on fasttext-prebuilt (fasttext/tests/__init__.py eagerly imports
+          # the C extension, which breaks pytest startup).
+          content = re.sub(r'\s*str\("fasttext\.tests"\),?', '', content)
           p.write_text(content)
+          shutil.rmtree('fasttext-src/python/fasttext_module/fasttext/tests', ignore_errors=True)
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
