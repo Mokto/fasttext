@@ -64,6 +64,18 @@ jobs:
           p.write_text(content)
           shutil.rmtree('fasttext-src/python/fasttext_module/fasttext/tests', ignore_errors=True)
 
+      - name: Patch FastText.py for NumPy 2.x compatibility
+        shell: python
+        run: |
+          import pathlib
+          p = pathlib.Path('fasttext-src/python/fasttext_module/fasttext/FastText.py')
+          content = p.read_text()
+          # np.array(..., copy=False) raises ValueError in NumPy 2.x when a copy
+          # is required. Replace with np.asarray() which allows copies (same as
+          # NumPy 1.x behaviour).
+          content = content.replace('np.array(probs, copy=False)', 'np.asarray(probs)')
+          p.write_text(content)
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
         with:
