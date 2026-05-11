@@ -44,6 +44,16 @@ jobs:
           mkdir fasttext-src
           tar xf sdist/fasttext-*.tar.gz -C fasttext-src --strip-components=1
 
+      - name: Rename package to fasttext-prebuilt
+        shell: python
+        run: |
+          import re, pathlib
+          p = pathlib.Path('fasttext-src/setup.py')
+          content = p.read_text()
+          # Replace the name= argument so PyPI sees fasttext-prebuilt
+          content = re.sub(r'(name\s*=\s*)["\']fasttext["\']', r'\1"fasttext-prebuilt"', content)
+          p.write_text(content)
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
         with:
@@ -69,7 +79,7 @@ jobs:
           path: wheelhouse/*.whl
 
   release:
-    name: GitHub release
+    name: GitHub release + PyPI
     needs: build_wheels
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
@@ -91,21 +101,12 @@ jobs:
           files: dist/*.whl
           generate_release_notes: true
           body: |
-            Pre-built fasttext ${{ env.FASTTEXT_VERSION }} wheels for **Python 3.14**.
+            Pre-built `fasttext-prebuilt` ${{ env.FASTTEXT_VERSION }} wheels for **Python 3.14**.
 
             ## Install
 
-            Download the `.whl` for your platform and install directly:
-
             ```bash
-            pip install fasttext-<version>-cp314-cp314-<platform>.whl
-            ```
-
-            Or point pip at this release:
-
-            ```bash
-            pip install fasttext --find-links \
-              https://github.com/Mokto/fasttext/releases/latest/download/
+            pip install fasttext-prebuilt
             ```
 
             ## Platforms
@@ -113,5 +114,11 @@ jobs:
             | OS | Architecture |
             |---|---|
             | Linux (manylinux) | x86_64, aarch64 |
-            | macOS | x86_64, arm64 |
+            | macOS | arm64 |
             | Windows | AMD64 |
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI }}
+          packages-dir: dist/
