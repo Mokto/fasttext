@@ -79,7 +79,7 @@ jobs:
       - name: Fix and check matrix initialization
         shell: bash
         run: |
-          git apply --directory=fasttext-src patches/matrix-initialization.patch
+          tr -d '\r' < patches/matrix-initialization.patch | git apply --directory=fasttext-src -
           clang++ -std=c++11 -pthread -I fasttext-src/src tests/matrix_initialization.cpp fasttext-src/src/{densematrix,matrix,vector}.cc -o "$RUNNER_TEMP/matrix-check"
           "$RUNNER_TEMP/matrix-check"
 
