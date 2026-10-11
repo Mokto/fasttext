@@ -76,10 +76,6 @@ jobs:
           content = content.replace('np.array(probs, copy=False)', 'np.asarray(probs)')
           p.write_text(content)
 
-      - name: Copy installed-wheel check
-        shell: bash
-        run: cp tests/smoke_wheel.py fasttext-src/smoke_wheel.py
-
       - name: Build wheels
         uses: pypa/cibuildwheel@v4.3.0
         with:
@@ -89,8 +85,8 @@ jobs:
           CIBW_BUILD: "cp314-* cp315-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
           CIBW_ARCHS: ${{ matrix.archs }}
-          CIBW_BEFORE_BUILD: "python -m pip install --only-binary=:all: 'pybind11>=3.1'"
-          CIBW_TEST_COMMAND: "python -I {project}/smoke_wheel.py"
+          CIBW_BEFORE_BUILD: 'python -m pip install --only-binary=:all: "pybind11>=3.1"'
+          CIBW_TEST_COMMAND: 'python -I "{project}/tests/smoke_wheel.py"'
           # MSVC reads the CL env var as extra flags; /std:c++17 enables string_view etc.
           # fasttext setup.py passes -std=c++17 which MSVC silently ignores.
           # ssize_t is POSIX-only; map it to Py_ssize_t which pybind11 always defines.
