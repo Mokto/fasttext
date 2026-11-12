@@ -1,0 +1,47 @@
+--- a/src/densematrix.h
++++ b/src/densematrix.h
+@@ -26,7 +26,7 @@
+ class DenseMatrix : public Matrix {
+  protected:
+   intgemm::AlignedVector<real> data_;
+-  void uniformThread(real, int, int32_t);
++  void uniformThread(real, int, int32_t, unsigned int);
+ 
+  public:
+   DenseMatrix();
+--- a/src/densematrix.cc
++++ b/src/densematrix.cc
+@@ -35,12 +35,13 @@
+   std::fill(data_.begin(), data_.end(), 0.0);
+ }
+ 
+-void DenseMatrix::uniformThread(real a, int block, int32_t seed) {
++void DenseMatrix::uniformThread(real a, int block, int32_t seed, unsigned int blocks) {
+   std::minstd_rand rng(block + seed);
+   std::uniform_real_distribution<> uniform(-a, a);
+-  int64_t blockSize = (m_ * n_) / 10;
++  int64_t blockSize = (m_ * n_) / blocks;
++  int64_t end = block == blocks - 1 ? m_ * n_ : blockSize * (block + 1);
+   for (int64_t i = blockSize * block;
+-       i < (m_ * n_) && i < blockSize * (block + 1);
++       i < end;
+        i++) {
+     data_[i] = uniform(rng);
+   }
+@@ -50,14 +51,14 @@
+   if (thread > 1) {
+     std::vector<std::thread> threads;
+     for (int i = 0; i < thread; i++) {
+-      threads.push_back(std::thread([=]() { uniformThread(a, i, seed); }));
++      threads.push_back(std::thread([=]() { uniformThread(a, i, seed, thread); }));
+     }
+     for (int32_t i = 0; i < threads.size(); i++) {
+       threads[i].join();
+     }
+   } else {
+     // webassembly can't instantiate `std::thread`
+-    uniformThread(a, 0, seed);
++    uniformThread(a, 0, seed, 1);
+   }
+ }
+ 
