@@ -100,7 +100,8 @@ jobs:
           # fasttext setup.py passes -std=c++17 which MSVC silently ignores.
           # ssize_t is POSIX-only; map it to Py_ssize_t which pybind11 always defines.
           CIBW_ENVIRONMENT_WINDOWS: 'CL="/std:c++17 /Dssize_t=Py_ssize_t"'
-          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=14.8"
+          # The runner emits a 15.8 minimum target; delocate rejects older targets.
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=15.8"
           CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v4

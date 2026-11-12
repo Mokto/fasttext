@@ -19,7 +19,7 @@ pip install --only-binary=:all: fasttext-prebuilt
 | Platform | Architectures |
 |---|---|
 | Linux (manylinux) | x86_64, aarch64 |
-| macOS | arm64 |
+| macOS 15.8+ | arm64 |
 | Windows | AMD64 |
 
 ## How it works
