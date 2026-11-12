@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             archs: arm64
           - os: windows-latest
             archs: AMD64
@@ -100,7 +100,6 @@ jobs:
           # fasttext setup.py passes -std=c++17 which MSVC silently ignores.
           # ssize_t is POSIX-only; map it to Py_ssize_t which pybind11 always defines.
           CIBW_ENVIRONMENT_WINDOWS: 'CL="/std:c++17 /Dssize_t=Py_ssize_t"'
-          # macOS 14 runner builds binaries targeting 14.8 — match it to satisfy delocate.
           CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=14.8"
           CIBW_BUILD_VERBOSITY: 1
 
